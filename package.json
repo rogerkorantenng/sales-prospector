@@ -1,0 +1,5 @@
+{
+  "name": "brownshift-prospector",
+  "private": true,
+  "workspaces": ["apps/*"]
+}
