@@ -1,0 +1,31 @@
+version: 0.2
+
+env:
+  variables:
+    PROJECT_ID: ""
+    BUCKET: ""
+
+phases:
+  pre_build:
+    commands:
+      - echo "Setting up build for project $PROJECT_ID"
+      - mkdir -p /build && cd /build
+      # Copy template node_modules via hardlink for speed
+      - cp -al /template/node_modules /build/node_modules
+      # Copy template config files
+      - cp /template/next.config.ts /template/tsconfig.json /template/postcss.config.mjs /template/next-env.d.ts /build/
+      - mkdir -p /build/src/lib && cp /template/src/lib/utils.ts /build/src/lib/utils.ts
+      # Download AI-generated source files FIRST
+      - aws s3 sync s3://$BUCKET/projects/$PROJECT_ID/source/ /build/
+      # Then overlay template shadcn components ON TOP (so AI can't break them)
+      - cp -r /template/src/components/ui/ /build/src/components/ui/
+
+  build:
+    commands:
+      - cd /build && npx next build
+
+  post_build:
+    commands:
+      - echo "Uploading build output to S3"
+      - aws s3 sync /build/out/ s3://$BUCKET/projects/$PROJECT_ID/build/ --delete
+      - echo "Build complete for project $PROJECT_ID"
